@@ -1,0 +1,10 @@
+# ignore generated .class files
+*.class
+
+# ignore eclipse related files
+.classpath
+.project
+.settings/
+
+# ignore javadoc directory
+doc/
