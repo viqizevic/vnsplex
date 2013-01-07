@@ -8,3 +8,9 @@
 
 # ignore javadoc directory
 doc/
+
+# ignore all everything under files directory
+# except two files
+files/*
+!files/info.txt
+!files/test.txt
