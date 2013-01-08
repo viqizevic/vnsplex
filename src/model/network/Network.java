@@ -1,7 +1,5 @@
 package model.network;
 
-import java.util.Collection;
-
 import model.graph.Graph;
 import model.graph.Key;
 
@@ -20,11 +18,11 @@ public class Network extends Graph {
 		super();
 		setDirected(true);
 		setName("Network");
-		DEMAND_KEY      = addVertexAttribute("Demand");
-		LOWER_BOUND_KEY = addEdgeAttribute("Lower bound of capacity");
-		CAPACITY_KEY    = addEdgeAttribute("Capacity");
-		COST_KEY        = addEdgeAttribute("Cost");
-		FLOW_KEY        = addEdgeAttribute("Flow");
+		DEMAND_KEY      = addVertexData("Demand");
+		LOWER_BOUND_KEY = addEdgeData("Lower bound of capacity");
+		CAPACITY_KEY    = addEdgeData("Capacity");
+		COST_KEY        = addEdgeData("Cost");
+		FLOW_KEY        = addEdgeData("Flow");
 	}
 	
 	public void addVertex(NetworkVertex v) {

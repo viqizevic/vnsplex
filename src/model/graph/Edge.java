@@ -18,9 +18,9 @@ public class Edge {
     private Vertex head;
     
     /**
-     * Attributes
+     * datas
      */
-    private HashMap<Key, Data> attributes = new HashMap<Key, Data>();
+    private HashMap<Key, Data> datas = new HashMap<Key, Data>();
     
     /**
      * Key object for hashing
@@ -68,26 +68,26 @@ public class Edge {
 		return key;
 	}
     
-    public void addAttribute(Data attribute, Key attributeKey) {
-    	attributes.put(attributeKey, attribute);
+    public void addData(Data data, Key dataKey) {
+    	datas.put(dataKey, data);
     }
     
-    public Data getAttribute(Key attributeKey) {
-    	if (!attributes.containsKey(attributeKey)) {
-    		attributes.put(attributeKey, new Data());
+    public Data getData(Key dataKey) {
+    	if (!datas.containsKey(dataKey)) {
+    		datas.put(dataKey, new Data());
     	}
-    	return attributes.get(attributeKey);
+    	return datas.get(dataKey);
     }
     
-    public Data removeAttribute(Key attributeKey) {
-    	return attributes.remove(attributeKey);
+    public Data removeData(Key dataKey) {
+    	return datas.remove(dataKey);
     }
     
     public String toString() {
     	String str = this.getClass().getSimpleName() + " (" + tail.getName() + "->" + head.getName() + ") ";
-    	if (!attributes.isEmpty()) {
+    	if (!datas.isEmpty()) {
     		str += "[";
-    		for (Data a : attributes.values()) {
+    		for (Data a : datas.values()) {
     			str += a.toString() + ", ";
     		}
     		str = str.substring(0,str.length()-2) + "]";

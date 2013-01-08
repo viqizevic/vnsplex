@@ -25,16 +25,16 @@ public class Graph {
 	 */
 	private HashMap<Key, Edge> edges = new HashMap<Key, Edge>();
 	
-    // For fast access to attribute keys via their description or vice versa
-    private Vector<Key> vertexAttributeKeys = new Vector<Key>();
+    // For fast access to data keys via their description or vice versa
+    private Vector<Key> vertexDataKeys = new Vector<Key>();
     
-    private Vector<String> vertexAttributeDescriptions = new Vector<String>();
+    private Vector<String> vertexDataDescriptions = new Vector<String>();
     
-    private Vector<Key> edgeAttributeKeys = new Vector<Key>();
+    private Vector<Key> edgeDataKeys = new Vector<Key>();
     
-    private Vector<String> edgeAttributeDescriptions = new Vector<String>();
+    private Vector<String> edgeDataDescriptions = new Vector<String>();
 
-    //id counter used for edge, vertex and attribute construction
+    //id counter used for edge, vertex and data construction
     protected static Long internalIdCounter = 0L;
     
     public Graph() {}
@@ -104,9 +104,9 @@ public class Graph {
 			e.setCounterEdge(counterEdge);
 			counterEdge.setCounterEdge(e);
 			edges.put(counterEdge.getKey(), counterEdge);
-			for (int j=0; j<edgeAttributeKeys.size(); j++) {
-				Key attributeKey = edgeAttributeKeys.elementAt(j);
-				counterEdge.addAttribute(e.getAttribute(attributeKey), attributeKey);
+			for (int j=0; j<edgeDataKeys.size(); j++) {
+				Key dataKey = edgeDataKeys.elementAt(j);
+				counterEdge.addData(e.getData(dataKey), dataKey);
 			}
 		}
 	}
@@ -127,65 +127,65 @@ public class Graph {
 		return vec;
 	}
 	
-	public Key addVertexAttribute(String description) {
-		if (vertexAttributeDescriptions.contains(description)) {
-			System.err.println("This description for the vertex attribute already available: " + description);
+	public Key addVertexData(String description) {
+		if (vertexDataDescriptions.contains(description)) {
+			System.err.println("This description for the vertex data already available: " + description);
 			return null;
 		}
 		Key k = new Key(internalIdCounter++);
-		vertexAttributeKeys.add(k);
-		vertexAttributeDescriptions.add(description);
+		vertexDataKeys.add(k);
+		vertexDataDescriptions.add(description);
 		return k;
 	}
 	
-	public Key getKeyOfVertexAttribute(String description) {
-		if (!vertexAttributeDescriptions.contains(description)) {
-			System.err.println("Unknown description for the vertex attribute: " + description);
+	public Key getKeyOfVertexData(String description) {
+		if (!vertexDataDescriptions.contains(description)) {
+			System.err.println("Unknown description for the vertex data: " + description);
 			return null;
 		}
-		int idx = vertexAttributeDescriptions.indexOf(description);
-		return vertexAttributeKeys.get(idx);
+		int idx = vertexDataDescriptions.indexOf(description);
+		return vertexDataKeys.get(idx);
 	}
 	
-	public void removeVertexAttribute(Key attributeKey) {
-		if (vertexAttributeKeys.contains(attributeKey)) {
+	public void removeVertexData(Key dataKey) {
+		if (vertexDataKeys.contains(dataKey)) {
 			for (Vertex v : vertices.values()) {
-				v.removeAttribute(attributeKey);
+				v.removeData(dataKey);
 			}
-			int idx = vertexAttributeKeys.indexOf(attributeKey);
-			vertexAttributeDescriptions.remove(idx);
-			vertexAttributeKeys.remove(idx);
+			int idx = vertexDataKeys.indexOf(dataKey);
+			vertexDataDescriptions.remove(idx);
+			vertexDataKeys.remove(idx);
 		}
 	}
 	
-	public Key addEdgeAttribute(String description) {
-		if (edgeAttributeDescriptions.contains(description)) {
-			System.err.println("This description for the edge attribute already available: " + description);
+	public Key addEdgeData(String description) {
+		if (edgeDataDescriptions.contains(description)) {
+			System.err.println("This description for the edge data already available: " + description);
 			return null;
 		}
 		Key k = new Key(internalIdCounter++);
-		edgeAttributeKeys.add(k);
-		edgeAttributeDescriptions.add(description);
+		edgeDataKeys.add(k);
+		edgeDataDescriptions.add(description);
 		return k;
 	}
 
-	public Key getKeyOfEdgeAttribute(String description) {
-		if (!edgeAttributeDescriptions.contains(description)) {
-			System.err.println("Unknown description for the edge attribute: " + description);
+	public Key getKeyOfEdgeData(String description) {
+		if (!edgeDataDescriptions.contains(description)) {
+			System.err.println("Unknown description for the edge data: " + description);
 			return null;
 		}
-		int idx = edgeAttributeDescriptions.indexOf(description);
-		return edgeAttributeKeys.get(idx);
+		int idx = edgeDataDescriptions.indexOf(description);
+		return edgeDataKeys.get(idx);
 	}
 
-	public void removeEdgeAttribute(Key attributeKey) {
-		if (edgeAttributeKeys.contains(attributeKey)) {
+	public void removeEdgeData(Key dataKey) {
+		if (edgeDataKeys.contains(dataKey)) {
 			for(Edge e : edges.values()) {
-				e.removeAttribute(attributeKey);
+				e.removeData(dataKey);
 			}
-			int idx = edgeAttributeKeys.indexOf(attributeKey);
-			edgeAttributeDescriptions.remove(idx);
-			edgeAttributeKeys.remove(idx);
+			int idx = edgeDataKeys.indexOf(dataKey);
+			edgeDataDescriptions.remove(idx);
+			edgeDataKeys.remove(idx);
 		}
 	}
 	

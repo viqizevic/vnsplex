@@ -1,6 +1,7 @@
 package model;
 
 import model.graph.Data;
+import model.graph.Edge;
 import model.graph.Key;
 import model.graph.Vertex;
 import model.network.Network;
@@ -12,18 +13,31 @@ import model.network.NetworkVertex;
 public class NetworkSimplex {
 	
 	public static void findMinCostFlow(Network network) {
-		Key nettoDemandKey = network.addVertexAttribute("Netto demand");
-		NetworkVertex k = new NetworkVertex();
-		k.setName("k");
+		
+		// Nettobedarf berechnen
+		// b'(v) = b(v) + l(delta_p(v)) - l(delta_m(v))
+		// für alle Knoten v
+		Key netDemandKey = network.addVertexData("Net demand");
 		for (Vertex vertex : network.getVertices()) {
 			NetworkVertex v = (NetworkVertex) vertex;
-			v.addAttribute(new Data(v.getDemand()), nettoDemandKey);
-			System.out.println(v.getAttribute(nettoDemandKey).getValue());
+			long b = v.getDemand();
+			long nb = b;
+			for (Edge edge : v.getOutgoingEdges()) {
+				NetworkEdge e = (NetworkEdge) edge;
+				nb += e.getLowerBound();
+			}
+			for (Edge edge : v.getIngoingEdges()) {
+				NetworkEdge e = (NetworkEdge) edge;
+				nb -= e.getLowerBound();
+			}
+			v.addData(new Data(nb), netDemandKey);
 //			NetworkEdge e = new NetworkEdge(k, (NetworkVertex)v);
 //			NetworkEdge f = new NetworkEdge((NetworkVertex)v, k);
 //			network.addEdge(e);
 //			network.addEdge(f);
 		}
+		NetworkVertex k = new NetworkVertex();
+		k.setName("k");
 		network.addVertex(k);
 		System.out.println(network);
 	}
