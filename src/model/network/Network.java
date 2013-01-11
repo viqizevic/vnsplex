@@ -1,5 +1,6 @@
 package model.network;
 
+import model.graph.Edge;
 import model.graph.Graph;
 import model.graph.Key;
 
@@ -31,6 +32,20 @@ public class Network extends Graph {
 	
 	public void addEdge(NetworkEdge e) {
 		super.addEdge(e);
+	}
+	
+	public long getBigM() {
+		long bigM = 1;
+		long c = 0;
+		for (Edge edge : getEdges()) {
+			NetworkEdge e = (NetworkEdge) edge;
+			long cost = Math.abs(e.getCost());
+			if (c < cost) {
+				c = cost;
+			}
+		}
+		bigM = 1 + Math.round(0.5*getNumberOfVertices()*c);
+		return bigM;
 	}
 	
 }

@@ -64,10 +64,10 @@ public class NetworkReader {
 					long cap = Long.parseLong(arcInfo[4]);
 					long cost = Long.parseLong(arcInfo[5]);
 					NetworkEdge e = new NetworkEdge(nodes[v], nodes[w]);
-					network.addEdge(e);
 					e.setLowerBound(low);
 					e.setCapacity(cap);
 					e.setCost(cost);
+					network.addEdge(e);
 				}
 				line = br.readLine();
 			}

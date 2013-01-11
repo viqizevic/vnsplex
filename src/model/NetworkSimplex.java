@@ -14,31 +14,43 @@ public class NetworkSimplex {
 	
 	public static void findMinCostFlow(Network network) {
 		
-		// Nettobedarf berechnen
-		// b'(v) = b(v) + l(delta_p(v)) - l(delta_m(v))
-		// für alle Knoten v
-		Key netDemandKey = network.addVertexData("Net demand");
-		for (Vertex vertex : network.getVertices()) {
-			NetworkVertex v = (NetworkVertex) vertex;
-			long b = v.getDemand();
-			long nb = b;
-			for (Edge edge : v.getOutgoingEdges()) {
-				NetworkEdge e = (NetworkEdge) edge;
-				nb += e.getLowerBound();
-			}
-			for (Edge edge : v.getIngoingEdges()) {
-				NetworkEdge e = (NetworkEdge) edge;
-				nb -= e.getLowerBound();
-			}
-			v.addData(new Data(nb), netDemandKey);
-//			NetworkEdge e = new NetworkEdge(k, (NetworkVertex)v);
-//			NetworkEdge f = new NetworkEdge((NetworkVertex)v, k);
-//			network.addEdge(e);
-//			network.addEdge(f);
-		}
+		// extend the network
+		long bigM = network.getBigM();
+		// add a new vertex k to the network
 		NetworkVertex k = new NetworkVertex();
 		k.setName("k");
+		k.setDemand(0L);
 		network.addVertex(k);
+		for (Vertex vertex : network.getVertices()) {
+			NetworkVertex v = (NetworkVertex) vertex;
+			if (v != k) {
+				// compute net demand (Nettobedarf: Mindestbedarf - Mindestlieferung)
+				// b'(v) = b(v) + l(delta_p(v)) - l(delta_m(v))
+				long b = v.getDemand();
+				long nb = b;
+				for (Edge edge : v.getOutgoingEdges()) {
+					NetworkEdge e = (NetworkEdge) edge;
+					nb += e.getLowerBound();
+				}
+				for (Edge edge : v.getIngoingEdges()) {
+					NetworkEdge e = (NetworkEdge) edge;
+					nb -= e.getLowerBound();
+				}
+				// depends on the net demand,
+				// add a new edge (v,k) or (k,v) to the network
+				NetworkEdge e;
+				if (nb < 0) {
+					e = new NetworkEdge(v,k);
+				} else {
+					e = new NetworkEdge(k,v);
+				}
+				e.setLowerBound(0L);
+				e.setCapacity(Long.MAX_VALUE);
+				e.setCost(bigM);
+				network.addEdge(e);
+			}
+		}
+		
 		System.out.println(network);
 	}
 	

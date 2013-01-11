@@ -96,6 +96,10 @@ public class Graph {
 		return vertices.values();
 	}
 	
+	public int getNumberOfVertices() {
+		return vertices.size();
+	}
+	
 	public void addEdge(Edge e) {
 		edges.put(e.getKey(), e);
 		// If the graph is undirected, add an counter edge
@@ -123,6 +127,7 @@ public class Graph {
 			}
 		} else {
 			// TODO if the graph is undirected
+			return null;
 		}
 		return vec;
 	}

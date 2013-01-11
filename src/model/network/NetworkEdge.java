@@ -29,8 +29,16 @@ public class NetworkEdge extends Edge {
 		addData(new Data(value), Network.CAPACITY_KEY);
 	}
 	
+	public long getCapacity() {
+		return (Long) getData(Network.CAPACITY_KEY).getValue();
+	}
+	
 	public void setCost(long value) {
 		addData(new Data(value), Network.COST_KEY);
+	}
+	
+	public long getCost() {
+		return (Long) getData(Network.COST_KEY).getValue();
 	}
 
 }
