@@ -14,11 +14,23 @@ import model.network.NetworkVertex;
 
 public class NetworkSimplex {
 	
-	public static void findMinCostFlow(Network network) {
+	private static Network network;
+	
+	private static LinkedList<NetworkEdge> tEdges;
+	
+	private static LinkedList<NetworkEdge> lEdges;
+	
+	private static LinkedList<NetworkEdge> uEdges;
+	
+	private static Key reducedCostDataKey;
+	
+	public static void findMinCostFlow(Network n) {
 		
-		// extend the network
+		NetworkSimplex.network = n;
+		
+		// Extend the network
 		long bigM = network.getBigM();
-		// add a new vertex k to the network
+		// Add a new vertex k to the network
 		NetworkVertex k = new NetworkVertex();
 		k.setName("k");
 		k.setDemand(0L);
@@ -26,7 +38,7 @@ public class NetworkSimplex {
 		for (Vertex vertex : network.getVertices()) {
 			NetworkVertex v = (NetworkVertex) vertex;
 			if (v != k) {
-				// compute net demand (Nettobedarf: Mindestbedarf - Mindestlieferung)
+				// Compute net demand (Nettobedarf: Mindestbedarf - Mindestlieferung)
 				// b'(v) = b(v) + l(delta_p(v)) - l(delta_m(v))
 				long b = v.getDemand();
 				long nb = b;
@@ -38,7 +50,7 @@ public class NetworkSimplex {
 					NetworkEdge e = (NetworkEdge) edge;
 					nb -= e.getLowerBound();
 				}
-				// depends on the net demand,
+				// Depends on the net demand,
 				// add a new edge (v,k) or (k,v) to the network
 				NetworkEdge e;
 				if (nb < 0) {
@@ -53,10 +65,10 @@ public class NetworkSimplex {
 			}
 		}
 		
-		// set T, L and U
-		LinkedList<NetworkEdge> tEdges = new LinkedList<NetworkEdge>();
-		LinkedList<NetworkEdge> lEdges = new LinkedList<NetworkEdge>();
-		LinkedList<NetworkEdge> uEdges = new LinkedList<NetworkEdge>();
+		// Set T, L and U
+		tEdges = new LinkedList<NetworkEdge>();
+		lEdges = new LinkedList<NetworkEdge>();
+		uEdges = new LinkedList<NetworkEdge>();
 		for (Edge edge : network.getEdges()) {
 			NetworkEdge e = (NetworkEdge) edge;
 			if (e.getTail() == k || e.getHead() == k) {
@@ -66,7 +78,7 @@ public class NetworkSimplex {
 			}
 		}
 		
-		// set the flow x
+		// Set the flow x
 		for (NetworkEdge e : lEdges) {
 			e.setFlow(e.getLowerBound());
 		}
@@ -106,7 +118,74 @@ public class NetworkSimplex {
 			}
 		}
 		
-		System.out.println(network);
+		// Set the vertex prices
+		Key vertexPriceDataKey = network.addVertexData("Vertex price");
+		k.addData(new Data(0L), vertexPriceDataKey);
+		for (Edge edge : k.getOutgoingEdges()) {
+			NetworkEdge e = (NetworkEdge) edge;
+			long cost = e.getCost();
+			e.getHead().addData(new Data(cost), vertexPriceDataKey);
+		}
+		for (Edge edge : k.getIngoingEdges()) {
+			NetworkEdge e = (NetworkEdge) edge;
+			long cost = e.getCost();
+			e.getTail().addData(new Data(-cost), vertexPriceDataKey);
+		}
+		
+		// Set the reduced cost
+		reducedCostDataKey = network.addEdgeData("Reduced cost");
+		for (Edge edge : network.getEdges()) {
+			NetworkEdge e = (NetworkEdge) edge;
+			long c = e.getCost();
+			long yTail = (Long) e.getTail().getData(vertexPriceDataKey).getValue();
+			long yHead = (Long) e.getHead().getData(vertexPriceDataKey).getValue();
+			e.addData(new Data(c + yTail - yHead), reducedCostDataKey);
+		}
+		
+		// While entering edge exists
+		int i=1;
+		while (enteringEdgeExists() && i <= 1) {
+			
+			// Choose an entering edge e
+			
+			// Find the cycle C in T+e
+			
+			// Compute epsilon
+			
+			// Update the flow
+			
+			// Find a leaving edge f
+			
+			// Update T, L and U
+			
+			i++;
+		}
+		
+		// Test optimality
+		
+		
+	}
+	
+	/**
+	 * Check if an entering edge exists.
+	 * The entering edge is an edge in L with negative reduced cost
+	 * or an edge in U with positive reduced cost.
+	 * @return <code>true</code> if an entering edge exists, <code>false</code> otherwise.
+	 */
+	private static boolean enteringEdgeExists() {
+		for (NetworkEdge e : lEdges) {
+			long rc = (Long) e.getData(reducedCostDataKey).getValue();
+			if (rc < 0) {
+				return true;
+			}
+		}
+		for (NetworkEdge e : uEdges) {
+			long rc = (Long) e.getData(reducedCostDataKey).getValue();
+			if (rc > 0) {
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	public static void main(String[] args) {
@@ -115,9 +194,7 @@ public class NetworkSimplex {
 //			network = NetworkReader.read("files/gte_bad.20.txt");
 			network = NetworkReader.read("files/test.txt");
 			NetworkSimplex.findMinCostFlow(network);
-			if (!network.isConsistent()) {
-				System.err.println("Network is not consistent");
-			}
+			System.out.println(network);
 		} catch (NetworkReaderException e) {
 			e.printStackTrace();
 		}

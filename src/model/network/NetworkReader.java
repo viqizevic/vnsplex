@@ -71,6 +71,7 @@ public class NetworkReader {
 				}
 				line = br.readLine();
 			}
+			br.close();
 		} catch (FileNotFoundException e) {
 			String errMsg = "File not found: " + fileName;
 			throw new NetworkReaderException(errMsg);
@@ -82,6 +83,10 @@ public class NetworkReader {
 		if (m != numbOfEdges) {
 			String errMsg = "Expected number of edges: " + m + ", ";
 			errMsg += "Number of edges found: " + numbOfEdges;
+			throw new NetworkReaderException(errMsg);
+		}
+		if (!network.isConsistent()) {
+			String errMsg = "Network is not consistent";
 			throw new NetworkReaderException(errMsg);
 		}
 		return network;
