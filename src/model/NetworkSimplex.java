@@ -1,5 +1,7 @@
 package model;
 
+import java.util.LinkedList;
+
 import model.graph.Data;
 import model.graph.Edge;
 import model.graph.Key;
@@ -48,6 +50,59 @@ public class NetworkSimplex {
 				e.setCapacity(Long.MAX_VALUE);
 				e.setCost(bigM);
 				network.addEdge(e);
+			}
+		}
+		
+		// set T, L and U
+		LinkedList<NetworkEdge> tEdges = new LinkedList<NetworkEdge>();
+		LinkedList<NetworkEdge> lEdges = new LinkedList<NetworkEdge>();
+		LinkedList<NetworkEdge> uEdges = new LinkedList<NetworkEdge>();
+		for (Edge edge : network.getEdges()) {
+			NetworkEdge e = (NetworkEdge) edge;
+			if (e.getTail() == k || e.getHead() == k) {
+				tEdges.add(e);
+			} else {
+				lEdges.add(e);
+			}
+		}
+		
+		// set the flow x
+		for (NetworkEdge e : lEdges) {
+			e.setFlow(e.getLowerBound());
+		}
+		for (NetworkEdge e : tEdges) {
+			NetworkVertex v = (NetworkVertex) e.getTail();
+			if (v != k) {
+				long x = -v.getDemand();
+				for (Edge edge : v.getIngoingEdges()) {
+					if (edge != e) {
+						NetworkEdge ingoingEdge = (NetworkEdge) edge;
+						x += ingoingEdge.getFlow();
+					}
+				}
+				for (Edge edge : v.getOutgoingEdges()) {
+					if (edge != e) {
+						NetworkEdge outgoingEdge = (NetworkEdge) edge;
+						x -= outgoingEdge.getFlow();
+					}
+				}
+				e.setFlow(x);
+			} else {
+				v = (NetworkVertex) e.getHead();
+				long x = v.getDemand();
+				for (Edge edge : v.getIngoingEdges()) {
+					if (edge != e) {
+						NetworkEdge ingoingEdge = (NetworkEdge) edge;
+						x -= ingoingEdge.getFlow();
+					}
+				}
+				for (Edge edge : v.getOutgoingEdges()) {
+					if (edge != e) {
+						NetworkEdge outgoingEdge = (NetworkEdge) edge;
+						x += outgoingEdge.getFlow();
+					}
+				}
+				e.setFlow(x);
 			}
 		}
 		
