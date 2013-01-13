@@ -1,5 +1,7 @@
 package model.network;
 
+import java.util.HashMap;
+
 import model.graph.Edge;
 import model.graph.Graph;
 import model.graph.Key;
@@ -8,6 +10,8 @@ import model.graph.Key;
  * The Network class implements a network.
  */
 public class Network extends Graph {
+	
+	private HashMap<Integer, Key> vertexKeys;
 	
 	protected static Key DEMAND_KEY;
 	protected static Key LOWER_BOUND_KEY;
@@ -19,6 +23,7 @@ public class Network extends Graph {
 		super();
 		setDirected(true);
 		setName("Network");
+		vertexKeys = new HashMap<Integer, Key>();
 		DEMAND_KEY      = addVertexData("Demand");
 		LOWER_BOUND_KEY = addEdgeData("Lower bound of capacity");
 		CAPACITY_KEY    = addEdgeData("Capacity");
@@ -26,26 +31,27 @@ public class Network extends Graph {
 		FLOW_KEY        = addEdgeData("Flow");
 	}
 	
-	public void addVertex(NetworkVertex v) {
+	public void addVertex(NetworkVertex v, int id) {
 		super.addVertex(v);
+		vertexKeys.put(id, v.getKey());
+	}
+	
+	public NetworkVertex getVertex(int id) {
+		return (NetworkVertex) getVertex(vertexKeys.get(id));
 	}
 	
 	public void addEdge(NetworkEdge e) {
 		super.addEdge(e);
 	}
 	
-	public long getBigM() {
-		long bigM = 1;
-		long c = 0;
-		for (Edge edge : getEdges()) {
-			NetworkEdge e = (NetworkEdge) edge;
-			long cost = Math.abs(e.getCost());
-			if (c < cost) {
-				c = cost;
-			}
+	/*
+	public String toString() {
+		String str = super.toString();
+		for (int i : vertexKeys.keySet()) {
+			str += i + " => " + getVertex(i) + "\n";
 		}
-		bigM = 1 + Math.round(0.5*getNumberOfVertices()*c);
-		return bigM;
+		return str;
 	}
+	*/
 	
 }

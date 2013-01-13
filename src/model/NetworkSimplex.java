@@ -1,5 +1,6 @@
 package model;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 
 import model.graph.Data;
@@ -22,19 +23,37 @@ public class NetworkSimplex {
 	
 	private static LinkedList<NetworkEdge> uEdges;
 	
+	private static int[] p;
+	
+	private static int[] d;
+	
+	private static int[] s;
+	
 	private static Key reducedCostDataKey;
 	
-	public static void findMinCostFlow(Network n) {
+	public static void findMinCostFlow(Network network) {
 		
-		NetworkSimplex.network = n;
+		NetworkSimplex.network = network;
+		int n = network.getNumberOfVertices();
 		
 		// Extend the network
-		long bigM = network.getBigM();
+		long bigM = 1;
+		long c = 0;
+		for (Edge edge : network.getEdges()) {
+			NetworkEdge e = (NetworkEdge) edge;
+			long cost = Math.abs(e.getCost());
+			if (c < cost) {
+				c = cost;
+			}
+		}
+		bigM = 1 + Math.round(0.5*n*c);
+		
 		// Add a new vertex k to the network
 		NetworkVertex k = new NetworkVertex();
 		k.setName("k");
 		k.setDemand(0L);
-		network.addVertex(k);
+		network.addVertex(k, 0);
+		n = n+1;
 		for (Vertex vertex : network.getVertices()) {
 			NetworkVertex v = (NetworkVertex) vertex;
 			if (v != k) {
@@ -65,18 +84,46 @@ public class NetworkSimplex {
 			}
 		}
 		
-		// Set T, L and U
+		// Set T, L, U, p, d, s
 		tEdges = new LinkedList<NetworkEdge>();
 		lEdges = new LinkedList<NetworkEdge>();
 		uEdges = new LinkedList<NetworkEdge>();
+		p = new int[n];
+		/*
+		 * predecessor index in the tree
+		 */
+		d = new int[n];
+		/*
+		 * depth index in the tree
+		 */
+		s = new int[n];
+		/*
+		 * depth first search traversal at first:
+		 * 0-1-2-3-4-...-0
+		 * 0 defines here k
+		 * for every pair -i-j- above we set s(i) := j
+		 */
 		for (Edge edge : network.getEdges()) {
 			NetworkEdge e = (NetworkEdge) edge;
 			if (e.getTail() == k || e.getHead() == k) {
 				tEdges.add(e);
+				Vertex v = e.getTail();
+				if (v == k) {
+					v = e.getHead();					
+				}
+				int i = Integer.parseInt(v.getName());
+				p[i] = 0;
+				d[i] = 1;
+				s[i] = i+1;
 			} else {
 				lEdges.add(e);
 			}
 		}
+		s[0] = 1;
+		s[n-1] = 0;
+		System.out.println("p: " + Arrays.toString(p));
+		System.out.println("d: " + Arrays.toString(d));
+		System.out.println("s: " + Arrays.toString(s));
 		
 		// Set the flow x
 		for (NetworkEdge e : lEdges) {
@@ -136,10 +183,10 @@ public class NetworkSimplex {
 		reducedCostDataKey = network.addEdgeData("Reduced cost");
 		for (Edge edge : network.getEdges()) {
 			NetworkEdge e = (NetworkEdge) edge;
-			long c = e.getCost();
+			long cost = e.getCost();
 			long yTail = (Long) e.getTail().getData(vertexPriceDataKey).getValue();
 			long yHead = (Long) e.getHead().getData(vertexPriceDataKey).getValue();
-			e.addData(new Data(c + yTail - yHead), reducedCostDataKey);
+			e.addData(new Data(cost + yTail - yHead), reducedCostDataKey);
 		}
 		
 		// While entering edge exists
@@ -147,7 +194,24 @@ public class NetworkSimplex {
 		while (enteringEdgeExists() && i <= 1) {
 			
 			// Choose an entering edge e
-			
+			NetworkEdge enteringEdge = null;
+			for (NetworkEdge e : lEdges) {
+				long rc = (Long) e.getData(reducedCostDataKey).getValue();
+				if (rc < 0) {
+					enteringEdge = e;
+					break;
+				}
+			}
+			if (enteringEdge == null) {
+				for (NetworkEdge e : uEdges) {
+					long rc = (Long) e.getData(reducedCostDataKey).getValue();
+					if (rc > 0) {
+						enteringEdge = e;
+						break;
+					}
+				}
+			}
+
 			// Find the cycle C in T+e
 			
 			// Compute epsilon

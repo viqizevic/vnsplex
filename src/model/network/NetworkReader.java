@@ -35,7 +35,7 @@ public class NetworkReader {
 					nodes = new NetworkVertex[n+1];
 					for (int i=1; i<=n; i++) {
 						nodes[i] = new NetworkVertex();
-						network.addVertex(nodes[i]);
+						network.addVertex(nodes[i], i);
 						nodes[i].setName(""+i);
 						nodes[i].setDemand(0L);
 					}
