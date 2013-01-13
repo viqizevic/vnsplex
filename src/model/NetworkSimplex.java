@@ -23,6 +23,8 @@ public class NetworkSimplex {
 	
 	private static LinkedList<NetworkEdge> uEdges;
 	
+	private static NetworkEdge[] tree;
+	
 	private static int[] p;
 	
 	private static int[] d;
@@ -36,7 +38,7 @@ public class NetworkSimplex {
 		NetworkSimplex.network = network;
 		int n = network.getNumberOfVertices();
 		
-		// Extend the network
+		// Compute M
 		long bigM = 1;
 		long c = 0;
 		for (Edge edge : network.getEdges()) {
@@ -88,6 +90,7 @@ public class NetworkSimplex {
 		tEdges = new LinkedList<NetworkEdge>();
 		lEdges = new LinkedList<NetworkEdge>();
 		uEdges = new LinkedList<NetworkEdge>();
+		tree = new NetworkEdge[n];
 		p = new int[n];
 		/*
 		 * predecessor index in the tree
@@ -112,6 +115,7 @@ public class NetworkSimplex {
 					v = e.getHead();					
 				}
 				int i = Integer.parseInt(v.getName());
+				tree[i] = e;
 				p[i] = 0;
 				d[i] = 1;
 				s[i] = i+1;
@@ -199,20 +203,57 @@ public class NetworkSimplex {
 				long rc = (Long) e.getData(reducedCostDataKey).getValue();
 				if (rc < 0) {
 					enteringEdge = e;
-					break;
+//					break;
 				}
 			}
-			if (enteringEdge == null) {
+//			if (enteringEdge == null) {
 				for (NetworkEdge e : uEdges) {
 					long rc = (Long) e.getData(reducedCostDataKey).getValue();
 					if (rc > 0) {
 						enteringEdge = e;
-						break;
-					}
+//						break;
+//					}
 				}
 			}
+			System.out.print("Entering edge: ");
+			System.out.println(enteringEdge);
 
-			// Find the cycle C in T+e
+			// Find the cycle C in T + enteringEdge
+			// Find the apex w of the cycle
+			int u = ((NetworkVertex) enteringEdge.getTail()).getId();
+			int v = ((NetworkVertex) enteringEdge.getHead()).getId();
+			long eps = Long.MAX_VALUE;
+			while (u != v) {
+				if (d[u] > d[v]) {
+					NetworkEdge e = tree[u];
+					long r;
+					if (network.getVertex(u) == e.getHead()) {
+						// e is forward edge
+						r = e.getCapacity() - e.getFlow();
+					} else {
+						r = e.getFlow() - e.getLowerBound();
+					}
+					if (r < eps) {
+						eps = r;
+					}
+					u = p[u];
+				} else {
+					NetworkEdge e = tree[v];
+					long r;
+					if (network.getVertex(v) == e.getTail()) {
+						// e is forward edge
+						r = e.getCapacity() - e.getFlow();
+					} else {
+						r = e.getFlow() - e.getLowerBound();
+					}
+					if (r < eps) {
+						eps = r;
+					}
+					v = p[v];
+				}
+			}
+			int w = u;
+			System.out.println(eps);
 			
 			// Compute epsilon
 			
@@ -258,7 +299,7 @@ public class NetworkSimplex {
 //			network = NetworkReader.read("files/gte_bad.20.txt");
 			network = NetworkReader.read("files/test.txt");
 			NetworkSimplex.findMinCostFlow(network);
-			System.out.println(network);
+//			System.out.println(network);
 		} catch (NetworkReaderException e) {
 			e.printStackTrace();
 		}
