@@ -44,6 +44,15 @@ public class Network extends Graph {
 		super.addEdge(e);
 	}
 	
+	public long computeTotalCost() {
+		long cost = 0;
+		for (Edge edge : getEdges()) {
+			NetworkEdge e = (NetworkEdge) edge;
+			cost += e.getCost()*e.getFlow();
+		}
+		return cost;
+	}
+	
 	/*
 	public String toString() {
 		String str = super.toString();

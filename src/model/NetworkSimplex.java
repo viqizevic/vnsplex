@@ -11,13 +11,12 @@ import model.network.Network;
 import model.network.NetworkEdge;
 import model.network.NetworkReader;
 import model.network.NetworkReaderException;
+import model.network.NetworkSolutionWriter;
 import model.network.NetworkVertex;
 
 public class NetworkSimplex {
 	
 	private static Network network;
-	
-	private static LinkedList<NetworkEdge> tEdges;
 	
 	private static LinkedList<NetworkEdge> lEdges;
 	
@@ -25,8 +24,14 @@ public class NetworkSimplex {
 	
 	private static NetworkEdge[] tree;
 	
+	/**
+	 * predecessor index in the tree
+	 */
 	private static int[] p;
 	
+	/**
+	 * depth index in the tree
+	 */
 	private static int[] d;
 	
 	private static int[] s;
@@ -40,27 +45,29 @@ public class NetworkSimplex {
 		
 		// Compute M
 		long bigM = 1;
-		long c = 0;
+		long maxCost = 0;
 		for (Edge edge : network.getEdges()) {
 			NetworkEdge e = (NetworkEdge) edge;
 			long cost = Math.abs(e.getCost());
-			if (c < cost) {
-				c = cost;
+			if (maxCost < cost) {
+				maxCost = cost;
 			}
 		}
-		bigM = 1 + Math.round(0.5*n*c);
+		bigM = 1 + Math.round(0.5*n*maxCost);
 		
 		// Add a new vertex k to the network
 		NetworkVertex k = new NetworkVertex();
 		k.setName("k");
 		k.setDemand(0L);
-		network.addVertex(k, 0);
+		network.addVertex(k, 0); // we give k the id 0
 		n = n+1;
 		for (Vertex vertex : network.getVertices()) {
 			NetworkVertex v = (NetworkVertex) vertex;
 			if (v != k) {
 				// Compute net demand (Nettobedarf: Mindestbedarf - Mindestlieferung)
 				// b'(v) = b(v) + l(delta_p(v)) - l(delta_m(v))
+				// delta_p(v) := {outgoing edges of v}
+				// delta_m(v) := {ingoing edges of v}
 				long b = v.getDemand();
 				long nb = b;
 				for (Edge edge : v.getOutgoingEdges()) {
@@ -87,35 +94,27 @@ public class NetworkSimplex {
 		}
 		
 		// Set T, L, U, p, d, s
-		tEdges = new LinkedList<NetworkEdge>();
 		lEdges = new LinkedList<NetworkEdge>();
 		uEdges = new LinkedList<NetworkEdge>();
 		tree = new NetworkEdge[n];
 		p = new int[n];
-		/*
-		 * predecessor index in the tree
-		 */
 		d = new int[n];
-		/*
-		 * depth index in the tree
-		 */
-		s = new int[n];
 		/*
 		 * depth first search traversal at first:
 		 * 0-1-2-3-4-...-0
-		 * 0 defines here k
 		 * for every pair -i-j- above we set s(i) := j
 		 */
+		s = new int[n];
 		for (Edge edge : network.getEdges()) {
 			NetworkEdge e = (NetworkEdge) edge;
 			if (e.getTail() == k || e.getHead() == k) {
-				tEdges.add(e);
+				// let v be the vertex not equals to k
 				Vertex v = e.getTail();
 				if (v == k) {
 					v = e.getHead();					
 				}
 				int i = Integer.parseInt(v.getName());
-				tree[i] = e;
+				tree[i] = e; // e is the edge between i and p[i]
 				p[i] = 0;
 				d[i] = 1;
 				s[i] = i+1;
@@ -133,7 +132,8 @@ public class NetworkSimplex {
 		for (NetworkEdge e : lEdges) {
 			e.setFlow(e.getLowerBound());
 		}
-		for (NetworkEdge e : tEdges) {
+		for (int i=1; i<tree.length; i++) {
+			NetworkEdge e = tree[i];
 			NetworkVertex v = (NetworkVertex) e.getTail();
 			if (v != k) {
 				long x = -v.getDemand();
@@ -294,16 +294,18 @@ public class NetworkSimplex {
 	}
 	
 	public static void main(String[] args) {
-		if (args.length != 1) {
-			System.out.println("Usage: java -jar netsimplex.jar <filename>");
+		if (args.length != 2) {
+			System.out.println("Usage: java -jar netsimplex.jar <fileinput> <fileoutput>");
 			return;
 		}
-		String fileName = args[0];
+		String fileInput = args[0];
+		String fileOutput = args[1];
 		Network network;
 		try {
-			network = NetworkReader.read(fileName);
+			network = NetworkReader.read(fileInput);
 			NetworkSimplex.findMinCostFlow(network);
 			System.out.println(network);
+			NetworkSolutionWriter.write(network, fileOutput);
 		} catch (NetworkReaderException e) {
 			e.printStackTrace();
 		}
