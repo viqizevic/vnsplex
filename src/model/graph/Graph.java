@@ -197,12 +197,16 @@ public class Graph {
 	public String toString() {
 		String str = name + "\n";
 		str += "Number of vertices: " + vertices.size() + "\n";
-		for (Vertex v : getVertices()) {
-			str += v + "\n";
+		if (vertices.size() <= 20) {
+			for (Vertex v : getVertices()) {
+				str += v + "\n";
+			}
 		}
 		str += "Number of edges: " + edges.size() + "\n";
-		for (Edge e : getEdges()) {
-			str += e + "\n";
+		if (edges.size() <= 20) {
+			for (Edge e : getEdges()) {
+				str += e + "\n";
+			}
 		}
 		return str;
 	}

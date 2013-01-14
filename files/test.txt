@@ -1,4 +1,4 @@
-c 20 msec
+c This is a test instance
 p min 4 4
 n 1 -4
 n 4 4

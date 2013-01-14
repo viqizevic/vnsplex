@@ -1,6 +1,9 @@
 # ignore generated .class files
 *.class
 
+# ignore .jar files
+*.jar
+
 # ignore eclipse related files
 .classpath
 .project

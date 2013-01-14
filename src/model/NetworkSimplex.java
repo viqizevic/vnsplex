@@ -294,12 +294,16 @@ public class NetworkSimplex {
 	}
 	
 	public static void main(String[] args) {
+		if (args.length != 1) {
+			System.out.println("Usage: java -jar netsimplex.jar <filename>");
+			return;
+		}
+		String fileName = args[0];
 		Network network;
 		try {
-//			network = NetworkReader.read("files/gte_bad.20.txt");
-			network = NetworkReader.read("files/test.txt");
+			network = NetworkReader.read(fileName);
 			NetworkSimplex.findMinCostFlow(network);
-//			System.out.println(network);
+			System.out.println(network);
 		} catch (NetworkReaderException e) {
 			e.printStackTrace();
 		}
