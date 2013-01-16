@@ -303,8 +303,10 @@ public class NetworkSimplex {
 		Network network;
 		try {
 			network = NetworkReader.read(fileInput);
-			NetworkSimplex.findMinCostFlow(network);
+			System.out.println("Succesfully read " + fileInput);
+			System.out.println("Created:");
 			System.out.println(network);
+			NetworkSimplex.findMinCostFlow(network);
 			NetworkSolutionWriter.write(network, fileOutput);
 		} catch (NetworkReaderException e) {
 			e.printStackTrace();
