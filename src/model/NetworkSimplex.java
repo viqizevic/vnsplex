@@ -134,9 +134,7 @@ public class NetworkSimplex {
 		s[0] = 1;
 		s[n-1] = 0;
 		if (inDebugMode) {
-			System.out.println("p: " + Arrays.toString(p));
-			System.out.println("d: " + Arrays.toString(d));
-			System.out.println("s: " + Arrays.toString(s));
+			printTreeAndLowerAndUpperEdges();
 		}
 		
 		// Set the flow x
@@ -288,9 +286,12 @@ public class NetworkSimplex {
 			j = numberOfEdgesBetweenApexAndTailOfEnteringEdge;
 			circle[j] = enteringEdge;
 			j++;
+			// check entering edge and remove it from L or U
 			if (enteringEdge.getFlow() == enteringEdge.getLowerBound()) {
+				lEdges.remove(enteringEdge.getKey());
 				enteringEdge.setFlow(enteringEdge.getFlow()+eps);
 			} else {
+				uEdges.remove(enteringEdge.getKey());
 				enteringEdge.setFlow(enteringEdge.getFlow()-eps);
 			}
 			v = ((NetworkVertex) enteringEdge.getHead()).getId();
@@ -325,6 +326,7 @@ public class NetworkSimplex {
 			}
 			
 			// Update vertex prices and reduced costs
+			// and also update T, L and U
 			HashMap<Key, NetworkVertex> subtree = new HashMap<Key, NetworkVertex>();
 			// T decomposes into two subtrees, if we delete the leaving edge
 			// Let T1 be the subtree containing the root k, T2 := T\T1
@@ -364,10 +366,34 @@ public class NetworkSimplex {
 					computeReducedCost(e);
 				}
 			}
+			u = ((NetworkVertex) enteringEdge.getTail()).getId();
+			v = ((NetworkVertex) enteringEdge.getHead()).getId();
+			// Let v be the node located in the subtree T2
+			if (subtree.containsKey(enteringEdge.getTail().getKey())) {
+				v = u;
+				u = ((NetworkVertex) enteringEdge.getHead()).getId();
+			}
+			tree[v] = enteringEdge; // add entering edge to T
+			// update array p
+			int x = p[v];
+			p[v] = u;
+			// recall that y and z are adjacent to the leaving edge
+			// and y the node located deeper than z in the tree
+			while (y.getId() != v) {
+				int tmp = p[x];
+				p[x] = v;
+				v = x;
+				x = tmp;
+			}
+			if (leavingEdge.getFlow() == leavingEdge.getLowerBound()) {
+				lEdges.put(leavingEdge.getKey(), leavingEdge);
+			} else {
+				uEdges.put(leavingEdge.getKey(), leavingEdge);
+			}
+			if (inDebugMode) {
+				printTreeAndLowerAndUpperEdges();
+			}
 			
-			// Update T, L and U
-			
-			System.out.println(network);
 			
 			
 			
@@ -377,6 +403,22 @@ public class NetworkSimplex {
 		// Test optimality
 		
 		
+	}
+	
+	private static void printTreeAndLowerAndUpperEdges() {
+		for (int i=1; i<tree.length; i++) {
+			NetworkEdge e = tree[i];
+			System.out.println("In T: " + e);
+		}
+		for (NetworkEdge e : lEdges.values()) {
+			System.out.println("In L: " + e);
+		}
+		for (NetworkEdge e : uEdges.values()) {
+			System.out.println("In U: " + e);
+		}
+		System.out.println("p: " + Arrays.toString(p));
+		System.out.println("d: " + Arrays.toString(d));
+		System.out.println("s: " + Arrays.toString(s));
 	}
 	
 	private static void computeReducedCost(NetworkEdge e) {
