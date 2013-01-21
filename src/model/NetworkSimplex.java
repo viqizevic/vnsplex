@@ -1,6 +1,7 @@
 package model;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedList;
 
 import model.graph.Data;
@@ -18,9 +19,9 @@ public class NetworkSimplex {
 	
 	private static Network network;
 	
-	private static LinkedList<NetworkEdge> lEdges;
+	private static HashMap<Key, NetworkEdge> lEdges;
 	
-	private static LinkedList<NetworkEdge> uEdges;
+	private static HashMap<Key, NetworkEdge> uEdges;
 	
 	private static NetworkEdge[] tree;
 	
@@ -101,8 +102,8 @@ public class NetworkSimplex {
 		}
 		
 		// Set T, L, U, p, d, s
-		lEdges = new LinkedList<NetworkEdge>();
-		uEdges = new LinkedList<NetworkEdge>();
+		lEdges = new HashMap<Key, NetworkEdge>();
+		uEdges = new HashMap<Key, NetworkEdge>();
 		tree = new NetworkEdge[n];
 		p = new int[n];
 		d = new int[n];
@@ -126,7 +127,7 @@ public class NetworkSimplex {
 				d[i] = 1;
 				s[i] = i+1;
 			} else {
-				lEdges.add(e);
+				lEdges.put(e.getKey(), e);
 			}
 		}
 		s[0] = 1;
@@ -138,7 +139,7 @@ public class NetworkSimplex {
 		}
 		
 		// Set the flow x
-		for (NetworkEdge e : lEdges) {
+		for (NetworkEdge e : lEdges.values()) {
 			e.setFlow(e.getLowerBound());
 		}
 		for (int i=1; i<tree.length; i++) {
@@ -208,7 +209,7 @@ public class NetworkSimplex {
 			
 			// Choose an entering edge e
 			NetworkEdge enteringEdge = null;
-			for (NetworkEdge e : lEdges) {
+			for (NetworkEdge e : lEdges.values()) {
 				long rc = (Long) e.getData(reducedCostDataKey).getValue();
 				if (rc < 0) {
 					enteringEdge = e;
@@ -216,7 +217,7 @@ public class NetworkSimplex {
 				}
 			}
 //			if (enteringEdge == null) {
-				for (NetworkEdge e : uEdges) {
+				for (NetworkEdge e : uEdges.values()) {
 					long rc = (Long) e.getData(reducedCostDataKey).getValue();
 					if (rc > 0) {
 						enteringEdge = e;
@@ -339,13 +340,13 @@ public class NetworkSimplex {
 	 * @return <code>true</code> if an entering edge exists, <code>false</code> otherwise.
 	 */
 	private static boolean enteringEdgeExists() {
-		for (NetworkEdge e : lEdges) {
+		for (NetworkEdge e : lEdges.values()) {
 			long rc = (Long) e.getData(reducedCostDataKey).getValue();
 			if (rc < 0) {
 				return true;
 			}
 		}
-		for (NetworkEdge e : uEdges) {
+		for (NetworkEdge e : uEdges.values()) {
 			long rc = (Long) e.getData(reducedCostDataKey).getValue();
 			if (rc > 0) {
 				return true;
