@@ -25,20 +25,27 @@ public class NetworkSimplex {
 	private static NetworkEdge[] tree;
 	
 	/**
-	 * predecessor index in the tree
+	 * Predecessor index in the tree
 	 */
 	private static int[] p;
 	
 	/**
-	 * depth index in the tree
+	 * Depth index in the tree
 	 */
 	private static int[] d;
 	
+	/**
+	 * Successor index in the tree based on depth first search traversion
+	 */
 	private static int[] s;
 	
 	private static Key reducedCostDataKey;
 	
+	private static boolean inDebugMode;
+	
 	public static void findMinCostFlow(Network network) {
+		
+		inDebugMode = true;
 		
 		NetworkSimplex.network = network;
 		int n = network.getNumberOfVertices();
@@ -124,9 +131,11 @@ public class NetworkSimplex {
 		}
 		s[0] = 1;
 		s[n-1] = 0;
-		System.out.println("p: " + Arrays.toString(p));
-		System.out.println("d: " + Arrays.toString(d));
-		System.out.println("s: " + Arrays.toString(s));
+		if (inDebugMode) {
+			System.out.println("p: " + Arrays.toString(p));
+			System.out.println("d: " + Arrays.toString(d));
+			System.out.println("s: " + Arrays.toString(s));
+		}
 		
 		// Set the flow x
 		for (NetworkEdge e : lEdges) {
@@ -215,14 +224,20 @@ public class NetworkSimplex {
 //					}
 				}
 			}
-			System.out.print("Entering edge: ");
-			System.out.println(enteringEdge);
+			if (inDebugMode) {
+				System.out.println(network);
+				System.out.println("Entering edge: ");
+				System.out.println(enteringEdge);
+			}
 
 			// Find the cycle C in T + enteringEdge
 			// Find the apex w of the cycle
+			// And compute epsilon
 			int u = ((NetworkVertex) enteringEdge.getTail()).getId();
 			int v = ((NetworkVertex) enteringEdge.getHead()).getId();
 			long eps = Long.MAX_VALUE;
+			int numberOfEdgesInCircle = 1;
+			int numberOfEdgesBetweenApexAndTailOfEnteringEdge = 0;
 			while (u != v) {
 				if (d[u] > d[v]) {
 					NetworkEdge e = tree[u];
@@ -233,10 +248,12 @@ public class NetworkSimplex {
 					} else {
 						r = e.getFlow() - e.getLowerBound();
 					}
-					if (r < eps) {
-						eps = r;
-					}
+					eps = Math.min(r, eps);
 					u = p[u];
+					if (inDebugMode) {
+						System.out.println("Edge in T+e: "+e);
+					}
+					numberOfEdgesBetweenApexAndTailOfEnteringEdge++;
 				} else {
 					NetworkEdge e = tree[v];
 					long r;
@@ -246,18 +263,62 @@ public class NetworkSimplex {
 					} else {
 						r = e.getFlow() - e.getLowerBound();
 					}
-					if (r < eps) {
-						eps = r;
-					}
+					eps = Math.min(r, eps);
 					v = p[v];
+					if (inDebugMode) {
+						System.out.println("Edge in T+e: "+e);
+					}
 				}
+				numberOfEdgesInCircle++;
 			}
 			int w = u;
-			System.out.println(eps);
-			
-			// Compute epsilon
+			if (inDebugMode) {
+				System.out.println("eps = " + eps);
+				System.out.println("|C| = " + numberOfEdgesInCircle);
+			}
 			
 			// Update the flow
+			NetworkEdge[] circle = new NetworkEdge[numberOfEdgesInCircle];
+			int j=numberOfEdgesBetweenApexAndTailOfEnteringEdge-1;
+			u = ((NetworkVertex) enteringEdge.getTail()).getId();
+			while (u != w) {
+				NetworkEdge e = tree[u];
+				if (network.getVertex(u) == e.getHead()) {
+					// e is forward edge
+					e.setFlow(e.getFlow()+eps);
+				} else {
+					e.setFlow(e.getFlow()-eps);
+				}
+				u = p[u];
+				circle[j] = e;
+				j--;
+			}
+			j = numberOfEdgesBetweenApexAndTailOfEnteringEdge;
+			circle[j] = enteringEdge;
+			j++;
+			if (enteringEdge.getFlow() == enteringEdge.getLowerBound()) {
+				enteringEdge.setFlow(enteringEdge.getFlow()+eps);
+			} else {
+				enteringEdge.setFlow(enteringEdge.getFlow()-eps);
+			}
+			v = ((NetworkVertex) enteringEdge.getHead()).getId();
+			while (v != w) {
+				NetworkEdge e = tree[v];
+				if (network.getVertex(v) == e.getTail()) {
+					// e is forward edge
+					e.setFlow(e.getFlow()+eps);
+				} else {
+					e.setFlow(e.getFlow()-eps);
+				}
+				v = p[v];
+				circle[j] = e;
+				j++;
+			}
+			if (inDebugMode) {
+				for (NetworkEdge e : circle) {
+					System.out.println("Update edge in circle: "+e);
+				}
+			}
 			
 			// Find a leaving edge f
 			
