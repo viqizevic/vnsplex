@@ -2,7 +2,6 @@ package model;
 
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedList;
 
 import model.graph.Data;
 import model.graph.Edge;
@@ -40,6 +39,8 @@ public class NetworkSimplex {
 	 */
 	private static int[] s;
 	
+	private static Key vertexPriceDataKey;
+	
 	private static Key reducedCostDataKey;
 	
 	private static boolean inDebugMode;
@@ -65,7 +66,7 @@ public class NetworkSimplex {
 		
 		// Add a new vertex k to the network
 		NetworkVertex k = new NetworkVertex();
-		k.setName("k");
+		k.setName("0");
 		k.setDemand(0L);
 		network.addVertex(k, 0); // we give k the id 0
 		n = n+1;
@@ -180,7 +181,7 @@ public class NetworkSimplex {
 		}
 		
 		// Set the vertex prices
-		Key vertexPriceDataKey = network.addVertexData("Vertex price");
+		vertexPriceDataKey = network.addVertexData("Vertex price");
 		k.addData(new Data(0L), vertexPriceDataKey);
 		for (Edge edge : k.getOutgoingEdges()) {
 			NetworkEdge e = (NetworkEdge) edge;
@@ -197,10 +198,7 @@ public class NetworkSimplex {
 		reducedCostDataKey = network.addEdgeData("Reduced cost");
 		for (Edge edge : network.getEdges()) {
 			NetworkEdge e = (NetworkEdge) edge;
-			long cost = e.getCost();
-			long yTail = (Long) e.getTail().getData(vertexPriceDataKey).getValue();
-			long yHead = (Long) e.getHead().getData(vertexPriceDataKey).getValue();
-			e.addData(new Data(cost + yTail - yHead), reducedCostDataKey);
+			computeReducedCost(e);
 		}
 		
 		// While entering edge exists
@@ -213,22 +211,21 @@ public class NetworkSimplex {
 				long rc = (Long) e.getData(reducedCostDataKey).getValue();
 				if (rc < 0) {
 					enteringEdge = e;
-//					break;
+					break;
 				}
 			}
-//			if (enteringEdge == null) {
+			if (enteringEdge == null) {
 				for (NetworkEdge e : uEdges.values()) {
 					long rc = (Long) e.getData(reducedCostDataKey).getValue();
 					if (rc > 0) {
 						enteringEdge = e;
-//						break;
-//					}
+						break;
+					}
 				}
 			}
 			if (inDebugMode) {
 				System.out.println(network);
-				System.out.println("Entering edge: ");
-				System.out.println(enteringEdge);
+				System.out.println("Entering edge: " + enteringEdge);
 			}
 
 			// Find the cycle C in T + enteringEdge
@@ -251,9 +248,6 @@ public class NetworkSimplex {
 					}
 					eps = Math.min(r, eps);
 					u = p[u];
-					if (inDebugMode) {
-						System.out.println("Edge in T+e: "+e);
-					}
 					numberOfEdgesBetweenApexAndTailOfEnteringEdge++;
 				} else {
 					NetworkEdge e = tree[v];
@@ -266,9 +260,6 @@ public class NetworkSimplex {
 					}
 					eps = Math.min(r, eps);
 					v = p[v];
-					if (inDebugMode) {
-						System.out.println("Edge in T+e: "+e);
-					}
 				}
 				numberOfEdgesInCircle++;
 			}
@@ -317,13 +308,68 @@ public class NetworkSimplex {
 			}
 			if (inDebugMode) {
 				for (NetworkEdge e : circle) {
-					System.out.println("Update edge in circle: "+e);
+					System.out.println("Updated edge in circle: "+e);
 				}
 			}
 			
-			// Find a leaving edge f
+			// Find leavingEdge
+			NetworkEdge leavingEdge = null;
+			for (NetworkEdge e : circle) {
+				if (e.getFlow() == e.getLowerBound() || e.getFlow() == e.getCapacity()) {
+					leavingEdge = e;
+					break;
+				}
+			}
+			if (inDebugMode) {
+				System.out.println("Leaving edge: " + leavingEdge);
+			}
+			
+			// Update vertex prices and reduced costs
+			HashMap<Key, NetworkVertex> subtree = new HashMap<Key, NetworkVertex>();
+			// T decomposes into two subtrees, if we delete the leaving edge
+			// Let T1 be the subtree containing the root k, T2 := T\T1
+			// We save in variable subtree all vertices belonging to T2
+			NetworkVertex z = (NetworkVertex) leavingEdge.getTail();
+			NetworkVertex y = (NetworkVertex) leavingEdge.getHead();
+			if (d[z.getId()] > d[y.getId()]) {
+				// Let y be the node located deeper than z in the tree
+				y = z;
+			}
+			subtree.put(y.getKey(), y);
+			int m = s[y.getId()];
+			while (d[y.getId()] < d[m]) {
+				NetworkVertex next = network.getVertex(m);
+				subtree.put(next.getKey(), next);
+				m = s[m];
+			}
+			if (inDebugMode) {
+				for (NetworkVertex vertex : subtree.values()) {
+					System.out.println("Node in T2: " + vertex);
+				}
+			}
+			long change = (Long) enteringEdge.getData(reducedCostDataKey).getValue();
+			// Let e = (u,v). If u in T2
+			if (subtree.containsKey(enteringEdge.getTail().getKey())) {
+				change = -1 * change;
+			}
+			for (NetworkVertex vertex : subtree.values()) {
+				long price = ((Long) vertex.getData(vertexPriceDataKey).getValue()) + change;
+				vertex.addData(new Data(price), vertexPriceDataKey);
+				for (Edge edge : vertex.getOutgoingEdges()) {
+					NetworkEdge e = (NetworkEdge) edge;
+					computeReducedCost(e);
+				}
+				for (Edge edge : vertex.getIngoingEdges()) {
+					NetworkEdge e = (NetworkEdge) edge;
+					computeReducedCost(e);
+				}
+			}
 			
 			// Update T, L and U
+			
+			System.out.println(network);
+			
+			
 			
 			i++;
 		}
@@ -331,6 +377,33 @@ public class NetworkSimplex {
 		// Test optimality
 		
 		
+	}
+	
+	private static void computeReducedCost(NetworkEdge e) {
+		long yTail = (Long) e.getTail().getData(vertexPriceDataKey).getValue();
+		long yHead = (Long) e.getHead().getData(vertexPriceDataKey).getValue();
+		long cost = e.getCost();
+		e.addData(new Data(cost + yTail - yHead), reducedCostDataKey);
+	}
+	
+	private static void computeVertexPrices(Network network) {
+		network.getVertex(0).addData(new Data(0L), vertexPriceDataKey);
+		int j = s[0];
+		while (j != 0) {
+			int i = p[j];
+			NetworkEdge e = tree[j];
+			// if e = (i,j)
+			if (network.getVertex(i) == e.getTail()) {
+				long price = ((Long) network.getVertex(i).getData(vertexPriceDataKey).getValue()) + e.getCost();
+				network.getVertex(j).addData(new Data(price), vertexPriceDataKey);
+			} else { // e = (j,i)
+				long price = ((Long) network.getVertex(i).getData(vertexPriceDataKey).getValue()) - e.getCost();
+				network.getVertex(j).addData(new Data(price), vertexPriceDataKey);
+			}
+			System.out.println("i: " + i);
+			System.out.println(e);
+			j = s[j];
+		}
 	}
 	
 	/**

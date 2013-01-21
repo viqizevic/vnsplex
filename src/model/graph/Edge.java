@@ -39,7 +39,11 @@ public class Edge {
 		head.addIngoingEdge(this);
 		tail.addOutgoingEdge(this);
     }
-
+    
+    /**
+     * Get the start vertex of this edge.
+     * @return The start vertex of this edge.
+     */
 	public Vertex getTail() {
 		return tail;
 	}
@@ -48,6 +52,10 @@ public class Edge {
 		this.tail = tail;
 	}
 
+    /**
+     * Get the end vertex of this edge.
+     * @return The end vertex of this edge.
+     */
 	public Vertex getHead() {
 		return head;
 	}
