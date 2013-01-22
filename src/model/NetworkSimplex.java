@@ -16,8 +16,6 @@ import model.network.NetworkVertex;
 
 public class NetworkSimplex {
 	
-	private static Network network;
-	
 	private static HashMap<Key, NetworkEdge> lEdges;
 	
 	private static HashMap<Key, NetworkEdge> uEdges;
@@ -49,7 +47,6 @@ public class NetworkSimplex {
 		
 		inDebugMode = true;
 		
-		NetworkSimplex.network = network;
 		int n = network.getNumberOfVertices();
 		
 		// Compute M
@@ -201,7 +198,7 @@ public class NetworkSimplex {
 		
 		// While entering edge exists
 		int i=1;
-		while (enteringEdgeExists() && i <= 1) {
+		while (enteringEdgeExists() && i <= 3) {
 			
 			// Choose an entering edge e
 			NetworkEdge enteringEdge = null;
@@ -222,6 +219,7 @@ public class NetworkSimplex {
 				}
 			}
 			if (inDebugMode) {
+				System.out.println("Iteration " + i);
 				System.out.println(network);
 				System.out.println("Entering edge: " + enteringEdge);
 			}
@@ -336,18 +334,22 @@ public class NetworkSimplex {
 			if (d[z.getId()] > d[y.getId()]) {
 				// Let y be the node located deeper than z in the tree
 				y = z;
+				z = (NetworkVertex) leavingEdge.getHead();
 			}
 			subtree.put(y.getKey(), y);
 			int m = s[y.getId()];
+			int lastVertexIdInSubtree = y.getId();
 			while (d[y.getId()] < d[m]) {
 				NetworkVertex next = network.getVertex(m);
 				subtree.put(next.getKey(), next);
+				lastVertexIdInSubtree = m;
 				m = s[m];
 			}
 			if (inDebugMode) {
 				for (NetworkVertex vertex : subtree.values()) {
-					System.out.println("Node in T2: " + vertex);
+					System.out.println("Vertex in T2: " + vertex);
 				}
+				System.out.println("Last vertex in T2: " + network.getVertex(lastVertexIdInSubtree));
 			}
 			long change = (Long) enteringEdge.getData(reducedCostDataKey).getValue();
 			// Let e = (u,v). If u in T2
@@ -376,15 +378,42 @@ public class NetworkSimplex {
 			tree[v] = enteringEdge; // add entering edge to T
 			// update array p
 			int x = p[v];
+			w = v;
 			p[v] = u;
+			d[v] = d[u] + 1;
 			// recall that y and z are adjacent to the leaving edge
 			// and y the node located deeper than z in the tree
-			while (y.getId() != v) {
+			while (w != y.getId()) {
 				int tmp = p[x];
-				p[x] = v;
-				v = x;
+				p[x] = w;
+				d[x] = d[w] + 1;
+				w = x;
 				x = tmp;
 			}
+			// update the depth index for all vertex in subtree T2
+			int succ = s[y.getId()];
+			while (succ != s[lastVertexIdInSubtree]) {
+				d[succ] = d[p[succ]] + 1;
+				succ = s[succ];
+			}
+			// Let h be the last vertex before y in the traversal (s[h] = y)
+			int h = z.getId();
+			while (s[h] != y.getId()) {
+				h = s[h];
+			}
+			System.out.println(z);
+			System.out.println(y);
+			System.out.println(h);
+			System.out.println(v);
+			System.out.println(u);
+			// update the successor index
+			System.out.println(lastVertexIdInSubtree);
+			int tmp = s[lastVertexIdInSubtree];
+			System.out.println(tmp);
+			s[lastVertexIdInSubtree] = s[u];
+			s[u] = v;
+			s[h] = tmp;
+			// add leaving edge to L or U
 			if (leavingEdge.getFlow() == leavingEdge.getLowerBound()) {
 				lEdges.put(leavingEdge.getKey(), leavingEdge);
 			} else {
@@ -393,9 +422,6 @@ public class NetworkSimplex {
 			if (inDebugMode) {
 				printTreeAndLowerAndUpperEdges();
 			}
-			
-			
-			
 			
 			i++;
 		}
