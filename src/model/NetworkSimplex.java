@@ -2,13 +2,10 @@ package model;
 
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Stack;
-import java.util.Vector;
 
 import model.graph.Data;
 import model.graph.Edge;
-import model.graph.Graph;
 import model.graph.Key;
 import model.graph.Vertex;
 import model.network.Network;
@@ -132,9 +129,6 @@ public class NetworkSimplex {
 		}
 		s[0] = 1;
 		s[n-1] = 0;
-		if (inDebugMode) {
-			printTreeAndLowerAndUpperEdges();
-		}
 		
 		// Set the flow x
 		for (NetworkEdge e : lEdges.values()) {
@@ -180,22 +174,28 @@ public class NetworkSimplex {
 		// Set the vertex prices
 		vertexPriceDataKey = network.addVertexData("Vertex price");
 		k.addData(new Data(0L), vertexPriceDataKey);
-		for (Edge edge : k.getOutgoingEdges()) {
-			NetworkEdge e = (NetworkEdge) edge;
-			long cost = e.getCost();
-			e.getHead().addData(new Data(cost), vertexPriceDataKey);
-		}
-		for (Edge edge : k.getIngoingEdges()) {
-			NetworkEdge e = (NetworkEdge) edge;
-			long cost = e.getCost();
-			e.getTail().addData(new Data(-cost), vertexPriceDataKey);
-		}
+//		for (Edge edge : k.getOutgoingEdges()) {
+//			NetworkEdge e = (NetworkEdge) edge;
+//			long cost = e.getCost();
+//			e.getHead().addData(new Data(cost), vertexPriceDataKey);
+//		}
+//		for (Edge edge : k.getIngoingEdges()) {
+//			NetworkEdge e = (NetworkEdge) edge;
+//			long cost = e.getCost();
+//			e.getTail().addData(new Data(-cost), vertexPriceDataKey);
+//		}
+		computeVertexPrices(network);
 		
 		// Set the reduced cost
 		reducedCostDataKey = network.addEdgeData("Reduced cost");
 		for (Edge edge : network.getEdges()) {
 			NetworkEdge e = (NetworkEdge) edge;
 			computeReducedCost(e);
+		}
+		
+		if (inDebugMode) {
+			System.out.println(network);
+			printTreeAndLowerAndUpperEdges();
 		}
 		
 		// While entering edge exists
@@ -353,7 +353,7 @@ public class NetworkSimplex {
 				}
 				System.out.println("Last vertex in T2: " + network.getVertex(lastVertexIdInSubtree));
 			}
-			long change = (Long) enteringEdge.getData(reducedCostDataKey).getValue();
+			long change = -1 * (Long) enteringEdge.getData(reducedCostDataKey).getValue();
 			// Let e = (u,v). If u in T2
 			if (subtree.containsKey(enteringEdge.getTail().getKey())) {
 				change = -1 * change;
@@ -513,8 +513,6 @@ public class NetworkSimplex {
 				long price = ((Long) network.getVertex(i).getData(vertexPriceDataKey).getValue()) - e.getCost();
 				network.getVertex(j).addData(new Data(price), vertexPriceDataKey);
 			}
-			System.out.println("i: " + i);
-			System.out.println(e);
 			j = s[j];
 		}
 	}
