@@ -2,9 +2,13 @@ package model;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Stack;
+import java.util.Vector;
 
 import model.graph.Data;
 import model.graph.Edge;
+import model.graph.Graph;
 import model.graph.Key;
 import model.graph.Vertex;
 import model.network.Network;
@@ -44,8 +48,6 @@ public class NetworkSimplex {
 	private static boolean inDebugMode;
 	
 	public static void findMinCostFlow(Network network) {
-		
-		inDebugMode = true;
 		
 		int n = network.getNumberOfVertices();
 		
@@ -198,7 +200,7 @@ public class NetworkSimplex {
 		
 		// While entering edge exists
 		int i=1;
-		while (enteringEdgeExists() && i <= 3) {
+		while (enteringEdgeExists()) {
 			
 			// Choose an entering edge e
 			NetworkEdge enteringEdge = null;
@@ -401,18 +403,58 @@ public class NetworkSimplex {
 			while (s[h] != y.getId()) {
 				h = s[h];
 			}
-			System.out.println(z);
-			System.out.println(y);
-			System.out.println(h);
-			System.out.println(v);
-			System.out.println(u);
+			
 			// update the successor index
-			System.out.println(lastVertexIdInSubtree);
-			int tmp = s[lastVertexIdInSubtree];
-			System.out.println(tmp);
-			s[lastVertexIdInSubtree] = s[u];
+			Network tree2 = new Network();
+			tree2.setDirected(false);
+			tree2.setName("T2");
+			for (NetworkVertex vertex : subtree.values()) {
+				NetworkVertex newVertex = new NetworkVertex();
+				newVertex.setName(""+vertex.getId());
+				tree2.addVertex(newVertex, vertex.getId());
+			}
+			for (NetworkVertex vertex : subtree.values()) {
+				NetworkVertex newVertex = tree2.getVertex(vertex.getId());
+				NetworkVertex newVertexParent = tree2.getVertex(p[vertex.getId()]);
+				if (newVertex != null && newVertexParent != null) {
+					NetworkEdge e = new NetworkEdge(newVertex, newVertexParent);
+					tree2.addEdge(e);
+				}
+			}
+			NetworkVertex[] verticesOfTree2SortedByDFS = new NetworkVertex[tree2.getNumberOfVertices()];
+			int l = 0;
+			Stack<NetworkVertex> stack = new Stack<NetworkVertex>();
+			Key vertexExploredKey = tree2.addVertexData("Explored");
+			NetworkVertex nv = tree2.getVertex(v);
+			stack.push(nv);
+			while (!stack.isEmpty()) {
+				nv = stack.pop();
+				nv.addData(new Data(true), vertexExploredKey);
+				verticesOfTree2SortedByDFS[l] = nv;
+				l++;
+				for (Edge outgoingEdge : nv.getOutgoingEdges()) {
+					NetworkVertex nw = (NetworkVertex) outgoingEdge.getHead();
+					if (nw.getData(vertexExploredKey).getValue() == null) {
+						nw.addData(new Data(true), vertexExploredKey);
+						stack.push(nw);
+					}
+				}
+			}
+			if (inDebugMode) {
+				System.out.println(tree2);
+				for (NetworkVertex vertex : verticesOfTree2SortedByDFS) {
+					System.out.println("T2: " + vertex);
+				}
+			}
+			s[h] = s[lastVertexIdInSubtree];
+			int len = verticesOfTree2SortedByDFS.length;
+			for (l=0; l<len-1; l++) {
+				nv = verticesOfTree2SortedByDFS[l];
+				s[nv.getId()] = verticesOfTree2SortedByDFS[l+1].getId();
+			}
+			s[verticesOfTree2SortedByDFS[len-1].getId()] = s[u];
 			s[u] = v;
-			s[h] = tmp;
+			
 			// add leaving edge to L or U
 			if (leavingEdge.getFlow() == leavingEdge.getLowerBound()) {
 				lEdges.put(leavingEdge.getKey(), leavingEdge);
@@ -428,6 +470,9 @@ public class NetworkSimplex {
 		
 		// Test optimality
 		
+		network.removeVertex(k);
+		network.removeVertexData(vertexPriceDataKey);
+		network.removeEdgeData(reducedCostDataKey);
 		
 	}
 	
@@ -509,8 +554,12 @@ public class NetworkSimplex {
 			System.out.println("Succesfully read " + fileInput);
 			System.out.println("Created:");
 			System.out.println(network);
+			inDebugMode = true;
 			NetworkSimplex.findMinCostFlow(network);
+			System.out.println(network);
+			System.out.println("Cost: " + network.computeTotalCost());
 			NetworkSolutionWriter.write(network, fileOutput);
+			System.out.println("Succesfully write " + fileOutput);
 		} catch (NetworkReaderException e) {
 			e.printStackTrace();
 		}

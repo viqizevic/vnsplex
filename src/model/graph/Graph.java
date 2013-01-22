@@ -127,7 +127,9 @@ public class Graph {
 			}
 		} else {
 			// TODO if the graph is undirected
-			return null;
+			for (Edge e: edges.values()) {
+				vec.add(e);
+			}
 		}
 		return vec;
 	}
@@ -195,7 +197,10 @@ public class Graph {
 	}
 	
 	public String toString() {
-		String str = name + "\n";
+		String str = "";
+		if (name != null) {
+			str = name + "\n";
+		}
 		str += "Number of vertices: " + vertices.size() + "\n";
 		if (vertices.size() <= 20) {
 			for (Vertex v : getVertices()) {
@@ -208,6 +213,7 @@ public class Graph {
 				str += e + "\n";
 			}
 		}
+		str = str.substring(0, str.length()-1);
 		return str;
 	}
 	

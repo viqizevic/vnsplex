@@ -92,7 +92,12 @@ public class Edge {
     }
     
     public String toString() {
-    	String str = this.getClass().getSimpleName() + " (" + tail.getName() + "->" + head.getName() + ") ";
+    	String str = this.getClass().getSimpleName();
+    	if (counterEdge == null) {
+        	str += " (" + tail.getName() + "->" + head.getName() + ") ";
+    	} else {
+        	str += " (" + tail.getName() + "--" + head.getName() + ") ";
+    	}
     	if (!datas.isEmpty()) {
     		str += "[";
     		for (Data a : datas.values()) {

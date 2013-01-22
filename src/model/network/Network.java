@@ -24,11 +24,13 @@ public class Network extends Graph {
 		setDirected(true);
 		setName("Network");
 		vertexKeys = new HashMap<Integer, Key>();
-		DEMAND_KEY      = addVertexData("Demand");
-		LOWER_BOUND_KEY = addEdgeData("Lower bound of capacity");
-		CAPACITY_KEY    = addEdgeData("Capacity");
-		COST_KEY        = addEdgeData("Cost");
-		FLOW_KEY        = addEdgeData("Flow");
+		if (DEMAND_KEY == null) {
+			DEMAND_KEY      = addVertexData("Demand");
+			LOWER_BOUND_KEY = addEdgeData("Lower bound of capacity");
+			CAPACITY_KEY    = addEdgeData("Capacity");
+			COST_KEY        = addEdgeData("Cost");
+			FLOW_KEY        = addEdgeData("Flow");
+		}
 	}
 	
 	public void addVertex(NetworkVertex v, int id) {

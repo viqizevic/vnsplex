@@ -18,6 +18,7 @@ public class NetworkReader {
 		int m = 0;
 		NetworkVertex[] nodes = null;
 		try {
+			@SuppressWarnings("resource")
 			BufferedReader br = new BufferedReader(new FileReader(fileName));
 			String line = br.readLine();
 			while (line != null) {
