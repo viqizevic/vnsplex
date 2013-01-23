@@ -1,6 +1,7 @@
 package model;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Stack;
 
@@ -17,10 +18,15 @@ import model.network.NetworkVertex;
 
 public class NetworkSimplex {
 	
+	private static Network network;
+	
 	private static HashMap<Key, NetworkEdge> lEdges;
 	
 	private static HashMap<Key, NetworkEdge> uEdges;
 	
+	/**
+	 * Spanning tree.
+	 */
 	private static NetworkEdge[] tree;
 	
 	/**
@@ -38,6 +44,11 @@ public class NetworkSimplex {
 	 */
 	private static int[] s;
 	
+	/**
+	 * Dummy root
+	 */
+	private static NetworkVertex root;
+	
 	private static Key vertexPriceDataKey;
 	
 	private static Key reducedCostDataKey;
@@ -46,152 +57,20 @@ public class NetworkSimplex {
 	
 	public static void findMinCostFlow(Network network) {
 		
-		int n = network.getNumberOfVertices();
+		NetworkSimplex.network = network;
 		
-		// Compute M
-		long bigM = 1;
-		long maxCost = 0;
-		for (Edge edge : network.getEdges()) {
-			NetworkEdge e = (NetworkEdge) edge;
-			long cost = Math.abs(e.getCost());
-			if (maxCost < cost) {
-				maxCost = cost;
-			}
-		}
-		bigM = 1 + Math.round(0.5*n*maxCost);
+		extendNetwork();
 		
-		// Add a new vertex k to the network
-		NetworkVertex k = new NetworkVertex();
-		k.setName("0");
-		k.setDemand(0L);
-		network.addVertex(k, 0); // we give k the id 0
-		n = n+1;
-		for (Vertex vertex : network.getVertices()) {
-			NetworkVertex v = (NetworkVertex) vertex;
-			if (v != k) {
-				// Compute net demand (Nettobedarf: Mindestbedarf - Mindestlieferung)
-				// b'(v) = b(v) + l(delta_p(v)) - l(delta_m(v))
-				// delta_p(v) := {outgoing edges of v}
-				// delta_m(v) := {ingoing edges of v}
-				long b = v.getDemand();
-				long nb = b;
-				for (Edge edge : v.getOutgoingEdges()) {
-					NetworkEdge e = (NetworkEdge) edge;
-					nb += e.getLowerBound();
-				}
-				for (Edge edge : v.getIngoingEdges()) {
-					NetworkEdge e = (NetworkEdge) edge;
-					nb -= e.getLowerBound();
-				}
-				// Depends on the net demand,
-				// add a new edge (v,k) or (k,v) to the network
-				NetworkEdge e;
-				if (nb < 0) {
-					e = new NetworkEdge(v,k);
-				} else {
-					e = new NetworkEdge(k,v);
-				}
-				e.setLowerBound(0L);
-				e.setCapacity(Long.MAX_VALUE);
-				e.setCost(bigM);
-				network.addEdge(e);
-			}
-		}
-		
-		// Set T, L, U, p, d, s
-		lEdges = new HashMap<Key, NetworkEdge>();
-		uEdges = new HashMap<Key, NetworkEdge>();
-		tree = new NetworkEdge[n];
-		p = new int[n];
-		d = new int[n];
-		/*
-		 * depth first search traversal at first:
-		 * 0-1-2-3-4-...-0
-		 * for every pair -i-j- above we set s(i) := j
-		 */
-		s = new int[n];
-		for (Edge edge : network.getEdges()) {
-			NetworkEdge e = (NetworkEdge) edge;
-			if (e.getTail() == k || e.getHead() == k) {
-				// let v be the vertex not equals to k
-				Vertex v = e.getTail();
-				if (v == k) {
-					v = e.getHead();					
-				}
-				int i = Integer.parseInt(v.getName());
-				tree[i] = e; // e is the edge between i and p[i]
-				p[i] = 0;
-				d[i] = 1;
-				s[i] = i+1;
-			} else {
-				lEdges.put(e.getKey(), e);
-			}
-		}
-		s[0] = 1;
-		s[n-1] = 0;
+		defineSpanningTreeDataStructures();
 		
 		// Set the flow x
-		for (NetworkEdge e : lEdges.values()) {
-			e.setFlow(e.getLowerBound());
-		}
-		for (int i=1; i<tree.length; i++) {
-			NetworkEdge e = tree[i];
-			NetworkVertex v = (NetworkVertex) e.getTail();
-			if (v != k) {
-				long x = -v.getDemand();
-				for (Edge edge : v.getIngoingEdges()) {
-					if (edge != e) {
-						NetworkEdge ingoingEdge = (NetworkEdge) edge;
-						x += ingoingEdge.getFlow();
-					}
-				}
-				for (Edge edge : v.getOutgoingEdges()) {
-					if (edge != e) {
-						NetworkEdge outgoingEdge = (NetworkEdge) edge;
-						x -= outgoingEdge.getFlow();
-					}
-				}
-				e.setFlow(x);
-			} else {
-				v = (NetworkVertex) e.getHead();
-				long x = v.getDemand();
-				for (Edge edge : v.getIngoingEdges()) {
-					if (edge != e) {
-						NetworkEdge ingoingEdge = (NetworkEdge) edge;
-						x -= ingoingEdge.getFlow();
-					}
-				}
-				for (Edge edge : v.getOutgoingEdges()) {
-					if (edge != e) {
-						NetworkEdge outgoingEdge = (NetworkEdge) edge;
-						x += outgoingEdge.getFlow();
-					}
-				}
-				e.setFlow(x);
-			}
-		}
+		computeInitialFlows();
 		
 		// Set the vertex prices
-		vertexPriceDataKey = network.addVertexData("Vertex price");
-		k.addData(new Data(0L), vertexPriceDataKey);
-//		for (Edge edge : k.getOutgoingEdges()) {
-//			NetworkEdge e = (NetworkEdge) edge;
-//			long cost = e.getCost();
-//			e.getHead().addData(new Data(-cost), vertexPriceDataKey);
-//		}
-//		for (Edge edge : k.getIngoingEdges()) {
-//			NetworkEdge e = (NetworkEdge) edge;
-//			long cost = e.getCost();
-//			e.getTail().addData(new Data(cost), vertexPriceDataKey);
-//		}
-		computeVertexPrices(network);
+		setInitialVertexPrices();
 		
-		// Set the reduced cost
-		reducedCostDataKey = network.addEdgeData("Reduced cost");
-		for (Edge edge : network.getEdges()) {
-			NetworkEdge e = (NetworkEdge) edge;
-			computeReducedCost(e);
-		}
+		// Set the reduced costs
+		setInitialReducedCosts();
 		
 		if (inDebugMode) {
 			System.out.println(network);
@@ -202,24 +81,9 @@ public class NetworkSimplex {
 		int i=1;
 		while (enteringEdgeExists()) {
 			
-			// Choose an entering edge e
-			NetworkEdge enteringEdge = null;
-			for (NetworkEdge e : lEdges.values()) {
-				long rc = (Long) e.getData(reducedCostDataKey).getValue();
-				if (rc < 0) {
-					enteringEdge = e;
-					break;
-				}
-			}
-			if (enteringEdge == null) {
-				for (NetworkEdge e : uEdges.values()) {
-					long rc = (Long) e.getData(reducedCostDataKey).getValue();
-					if (rc > 0) {
-						enteringEdge = e;
-						break;
-					}
-				}
-			}
+			// Choose an entering edge
+			NetworkEdge enteringEdge = chooseAnEnteringEdge();
+			
 			if (inDebugMode) {
 				System.out.println("Iteration " + i);
 				System.out.println(network);
@@ -262,6 +126,7 @@ public class NetworkSimplex {
 				numberOfEdgesInCircle++;
 			}
 			int w = u;
+			
 			if (inDebugMode) {
 				System.out.println("eps = " + eps);
 				System.out.println("|C| = " + numberOfEdgesInCircle);
@@ -307,6 +172,7 @@ public class NetworkSimplex {
 				circle[j] = e;
 				j++;
 			}
+			
 			if (inDebugMode) {
 				for (NetworkEdge e : circle) {
 					System.out.println("Updated edge in circle: "+e);
@@ -314,13 +180,8 @@ public class NetworkSimplex {
 			}
 			
 			// Find leavingEdge
-			NetworkEdge leavingEdge = null;
-			for (NetworkEdge e : circle) {
-				if (e.getFlow() == e.getLowerBound() || e.getFlow() == e.getCapacity()) {
-					leavingEdge = e;
-					break;
-				}
-			}
+			NetworkEdge leavingEdge = findLeavingEdge(circle);
+
 			if (inDebugMode) {
 				System.out.println("Leaving edge: " + leavingEdge);
 			}
@@ -347,12 +208,14 @@ public class NetworkSimplex {
 				lastVertexIdInSubtree = m;
 				m = s[m];
 			}
+			
 			if (inDebugMode) {
 				for (NetworkVertex vertex : subtree.values()) {
 					System.out.println("Vertex in T2: " + vertex);
 				}
 				System.out.println("Last vertex in T2: " + network.getVertex(lastVertexIdInSubtree));
 			}
+			
 			long change = -1 * (Long) enteringEdge.getData(reducedCostDataKey).getValue();
 			// Let e = (u,v). If u in T2
 			if (subtree.containsKey(enteringEdge.getTail().getKey())) {
@@ -377,7 +240,17 @@ public class NetworkSimplex {
 				v = u;
 				u = ((NetworkVertex) enteringEdge.getHead()).getId();
 			}
-			tree[v] = enteringEdge; // add entering edge to T
+			
+			// add entering edge to T
+			tree[v] = enteringEdge;
+			
+			// add leaving edge to L or U
+			if (leavingEdge.getFlow() == leavingEdge.getLowerBound()) {
+				lEdges.put(leavingEdge.getKey(), leavingEdge);
+			} else {
+				uEdges.put(leavingEdge.getKey(), leavingEdge);
+			}
+
 			// update array p
 			int x = p[v];
 			w = v;
@@ -440,12 +313,14 @@ public class NetworkSimplex {
 					}
 				}
 			}
+			
 			if (inDebugMode) {
 				System.out.println(tree2);
 				for (NetworkVertex vertex : verticesOfTree2SortedByDFS) {
 					System.out.println("T2: " + vertex);
 				}
 			}
+			
 			s[h] = s[lastVertexIdInSubtree];
 			int len = verticesOfTree2SortedByDFS.length;
 			for (l=0; l<len-1; l++) {
@@ -455,12 +330,6 @@ public class NetworkSimplex {
 			s[verticesOfTree2SortedByDFS[len-1].getId()] = s[u];
 			s[u] = v;
 			
-			// add leaving edge to L or U
-			if (leavingEdge.getFlow() == leavingEdge.getLowerBound()) {
-				lEdges.put(leavingEdge.getKey(), leavingEdge);
-			} else {
-				uEdges.put(leavingEdge.getKey(), leavingEdge);
-			}
 			if (inDebugMode) {
 				printTreeAndLowerAndUpperEdges();
 			}
@@ -470,12 +339,205 @@ public class NetworkSimplex {
 		
 		// Test optimality
 		
-		network.removeVertex(k);
+		network.removeVertex(root);
 		network.removeVertexData(vertexPriceDataKey);
 		network.removeEdgeData(reducedCostDataKey);
 		
 	}
+
+	private static NetworkEdge chooseAnEnteringEdge() {
+		for (NetworkEdge e : lEdges.values()) {
+			long rc = (Long) e.getData(reducedCostDataKey).getValue();
+			if (rc < 0) {
+				return e;
+			}
+		}
+		for (NetworkEdge e : uEdges.values()) {
+			long rc = (Long) e.getData(reducedCostDataKey).getValue();
+			if (rc > 0) {
+				return e;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Extends network by adding a root vertex and edges between this root and all nodes.
+	 */
+	private static void extendNetwork() {
+		
+		int n = network.getNumberOfVertices();
+		
+		// Compute M
+		long bigM = 1;
+		long maxCost = 0;
+		for (Edge edge : network.getEdges()) {
+			NetworkEdge e = (NetworkEdge) edge;
+			long cost = Math.abs(e.getCost());
+			if (maxCost < cost) {
+				maxCost = cost;
+			}
+		}
+		bigM = 1 + Math.round(0.5*n*maxCost);
+		
+		// Add a new vertex k to the network
+		root = new NetworkVertex();
+		root.setName("0");
+		root.setDemand(0L);
+		network.addVertex(root, 0); // we give k the id 0
+		n = n+1;
+		for (Vertex vertex : network.getVertices()) {
+			NetworkVertex v = (NetworkVertex) vertex;
+			if (v != root) {
+				// Compute net demand (Nettobedarf: Mindestbedarf - Mindestlieferung)
+				// b'(v) = b(v) + l(delta_p(v)) - l(delta_m(v))
+				// delta_p(v) := {outgoing edges of v}
+				// delta_m(v) := {ingoing edges of v}
+				long b = v.getDemand();
+				long nb = b;
+				for (Edge edge : v.getOutgoingEdges()) {
+					NetworkEdge e = (NetworkEdge) edge;
+					nb += e.getLowerBound();
+				}
+				for (Edge edge : v.getIngoingEdges()) {
+					NetworkEdge e = (NetworkEdge) edge;
+					nb -= e.getLowerBound();
+				}
+				// Depends on the net demand,
+				// add a new edge (v,k) or (k,v) to the network
+				NetworkEdge e;
+				if (nb < 0) {
+					e = new NetworkEdge(v,root);
+				} else {
+					e = new NetworkEdge(root,v);
+				}
+				e.setLowerBound(0L);
+				e.setCapacity(Long.MAX_VALUE);
+				e.setCost(bigM);
+				network.addEdge(e);
+			}
+		}
+	}
 	
+	/**
+	 * Initializes data structures needed.
+	 */
+	private static void defineSpanningTreeDataStructures() {
+		
+		int n = network.getNumberOfVertices();
+		
+		// Set T, L, U, p, d, s
+		lEdges = new HashMap<Key, NetworkEdge>();
+		uEdges = new HashMap<Key, NetworkEdge>();
+		tree = new NetworkEdge[n];
+		p = new int[n];
+		d = new int[n];
+		/*
+		 * depth first search traversal at first:
+		 * 0-1-2-3-4-...-0
+		 * for every pair -i-j- above we set s(i) := j
+		 */
+		s = new int[n];
+		for (Edge edge : network.getEdges()) {
+			NetworkEdge e = (NetworkEdge) edge;
+			if (e.getTail() == root || e.getHead() == root) {
+				// let v be the vertex not equals to k
+				Vertex v = e.getTail();
+				if (v == root) {
+					v = e.getHead();					
+				}
+				int i = Integer.parseInt(v.getName());
+				tree[i] = e; // e is the edge between i and p[i]
+				p[i] = 0;
+				d[i] = 1;
+				s[i] = i+1;
+			} else {
+				lEdges.put(e.getKey(), e);
+			}
+		}
+		s[0] = 1;
+		s[n-1] = 0;
+	}
+	
+	/**
+	 * Computes the initial flow in the network.
+	 */
+	private static void computeInitialFlows() {
+		
+		for (NetworkEdge e : lEdges.values()) {
+			e.setFlow(e.getLowerBound());
+		}
+		for (int i=1; i<tree.length; i++) {
+			NetworkEdge e = tree[i];
+			NetworkVertex v = (NetworkVertex) e.getTail();
+			if (v != root) {
+				long x = -v.getDemand();
+				for (Edge edge : v.getIngoingEdges()) {
+					if (edge != e) {
+						NetworkEdge ingoingEdge = (NetworkEdge) edge;
+						x += ingoingEdge.getFlow();
+					}
+				}
+				for (Edge edge : v.getOutgoingEdges()) {
+					if (edge != e) {
+						NetworkEdge outgoingEdge = (NetworkEdge) edge;
+						x -= outgoingEdge.getFlow();
+					}
+				}
+				e.setFlow(x);
+			} else {
+				v = (NetworkVertex) e.getHead();
+				long x = v.getDemand();
+				for (Edge edge : v.getIngoingEdges()) {
+					if (edge != e) {
+						NetworkEdge ingoingEdge = (NetworkEdge) edge;
+						x -= ingoingEdge.getFlow();
+					}
+				}
+				for (Edge edge : v.getOutgoingEdges()) {
+					if (edge != e) {
+						NetworkEdge outgoingEdge = (NetworkEdge) edge;
+						x += outgoingEdge.getFlow();
+					}
+				}
+				e.setFlow(x);
+			}
+		}
+	}
+
+	private static void setInitialVertexPrices() {
+		vertexPriceDataKey = network.addVertexData("Vertex price");
+		root.addData(new Data(0L), vertexPriceDataKey);
+		for (Edge edge : root.getOutgoingEdges()) {
+			NetworkEdge e = (NetworkEdge) edge;
+			long cost = e.getCost();
+			e.getHead().addData(new Data(-cost), vertexPriceDataKey);
+		}
+		for (Edge edge : root.getIngoingEdges()) {
+			NetworkEdge e = (NetworkEdge) edge;
+			long cost = e.getCost();
+			e.getTail().addData(new Data(cost), vertexPriceDataKey);
+		}
+//		computeVertexPrices(network);
+	}
+
+	private static void setInitialReducedCosts() {
+		reducedCostDataKey = network.addEdgeData("Reduced cost");
+		for (Edge edge : network.getEdges()) {
+			NetworkEdge e = (NetworkEdge) edge;
+			computeReducedCost(e);
+		}
+	}
+
+	private static NetworkEdge findLeavingEdge(NetworkEdge[] circle) {
+		for (NetworkEdge e : circle) {
+			if (e.getFlow() == e.getLowerBound() || e.getFlow() == e.getCapacity()) {
+				return e;
+			}
+		}
+		return null;
+	}
+
 	private static void printTreeAndLowerAndUpperEdges() {
 		for (int i=1; i<tree.length; i++) {
 			NetworkEdge e = tree[i];
@@ -507,10 +569,10 @@ public class NetworkSimplex {
 			NetworkEdge e = tree[j];
 			// if e = (i,j)
 			if (network.getVertex(i) == e.getTail()) {
-				long price = ((Long) network.getVertex(i).getData(vertexPriceDataKey).getValue()) + e.getCost();
+				long price = ((Long) network.getVertex(i).getData(vertexPriceDataKey).getValue()) - e.getCost();
 				network.getVertex(j).addData(new Data(price), vertexPriceDataKey);
 			} else { // e = (j,i)
-				long price = ((Long) network.getVertex(i).getData(vertexPriceDataKey).getValue()) - e.getCost();
+				long price = ((Long) network.getVertex(i).getData(vertexPriceDataKey).getValue()) + e.getCost();
 				network.getVertex(j).addData(new Data(price), vertexPriceDataKey);
 			}
 			j = s[j];
