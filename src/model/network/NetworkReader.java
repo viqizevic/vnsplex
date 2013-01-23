@@ -51,7 +51,7 @@ public class NetworkReader {
 						throw new NetworkReaderException(errMsg);
 					}
 					int id = Integer.parseInt(nodeInfo[1]);
-					long demand = Long.parseLong(nodeInfo[2]);
+					long demand = -1 * Long.parseLong(nodeInfo[2]);
 					nodes[id].setDemand(demand);
 				} else if (line.startsWith("a ")) {
 					if (nodes == null) {

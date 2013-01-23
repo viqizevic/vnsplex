@@ -177,12 +177,12 @@ public class NetworkSimplex {
 //		for (Edge edge : k.getOutgoingEdges()) {
 //			NetworkEdge e = (NetworkEdge) edge;
 //			long cost = e.getCost();
-//			e.getHead().addData(new Data(cost), vertexPriceDataKey);
+//			e.getHead().addData(new Data(-cost), vertexPriceDataKey);
 //		}
 //		for (Edge edge : k.getIngoingEdges()) {
 //			NetworkEdge e = (NetworkEdge) edge;
 //			long cost = e.getCost();
-//			e.getTail().addData(new Data(-cost), vertexPriceDataKey);
+//			e.getTail().addData(new Data(cost), vertexPriceDataKey);
 //		}
 		computeVertexPrices(network);
 		
@@ -496,7 +496,7 @@ public class NetworkSimplex {
 		long yTail = (Long) e.getTail().getData(vertexPriceDataKey).getValue();
 		long yHead = (Long) e.getHead().getData(vertexPriceDataKey).getValue();
 		long cost = e.getCost();
-		e.addData(new Data(cost + yTail - yHead), reducedCostDataKey);
+		e.addData(new Data(cost + yHead - yTail), reducedCostDataKey);
 	}
 	
 	private static void computeVertexPrices(Network network) {
