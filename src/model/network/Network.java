@@ -55,14 +55,10 @@ public class Network extends Graph {
 		return cost;
 	}
 	
-	/*
 	public String toString() {
-		String str = super.toString();
-		for (int i : vertexKeys.keySet()) {
-			str += i + " => " + getVertex(i) + "\n";
-		}
+		String str = super.toString() + "\n";
+		str += "Cost: " + computeTotalCost();
 		return str;
 	}
-	*/
 	
 }
